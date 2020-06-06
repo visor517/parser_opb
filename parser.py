@@ -38,7 +38,7 @@ for number in range(1,17):
         question_line = []
         question_line.append(question_card.find('div', class_ = 'show-question-content').text)
         for answer in question_card.find_all('li', class_ = 'answer'):
-            question_line.append(answer.text)
+            question_line.append(answer.text.replace('неправильно',''))
                 
         ticket_file.write('\n' + ';'.join(question_line))
 
