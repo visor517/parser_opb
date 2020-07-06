@@ -1,12 +1,11 @@
 # импорт библиотек
 from selenium import webdriver
-from selenium.webdriver.chrome.options import Options
 from bs4 import BeautifulSoup
 import time
 
-chrome_options = Options()
-chrome_options.add_argument('--headless')
-driver = webdriver.Chrome('chromedriver.exe') #добавить , options=chrome_options для Headless Chrome
+driver = webdriver.Chrome('chromedriver.exe')
+
+file = open(f'result/theme_A1.csv', 'w', encoding='utf-8') 
 
 # Переход по страницам (билетам)
 for number in range(1,17):
@@ -19,29 +18,30 @@ for number in range(1,17):
 
     driver.find_element_by_id('action-button').submit() #отправляем форму
     
-    if driver.switch_to_alert():
-        driver.switch_to_alert().accept()   #иногда вылезает alert при отправке тк проверяется переход по страницам, а его не было
+    try:    #иногда вылетае алерт, тк вопросы не просматривались. убираем его
+        driver.switch_to_alert().accept()
+    except Exception:
+        print('Алерта нет')
 
-    time.sleep(2)
-
-    ticket_file = open(f'result/ticket_a1_{number}.txt', 'w', encoding='utf-8')  
+    time.sleep(3) #ждем загрузки страницы с результатом
 
     requiredHtml = driver.page_source
     soup = BeautifulSoup(requiredHtml, 'lxml')
 
-    # билет
-    ticket = soup.find('h1', class_ = 'entry-title').text
-    ticket_file.write(ticket)
-
     # вопрос
     for question_card in soup.find_all('div', class_ = 'show-question'):
-        question_line = []
-        question_line.append(question_card.find('div', class_ = 'show-question-content').text)
+        question = question_card.find('div', class_ = 'show-question-content').text
+        answers_list = []
         for answer in question_card.find_all('li', class_ = 'answer'):
-            question_line.append(answer.text.replace('неправильно',''))
-                
-        ticket_file.write('\n' + ';'.join(question_line))
+            answer_text = answer.span.text
+            hint = answer.find('span', class_ = 'watupro-screen-reader')
+            if hint:
+                if hint.text == 'правильно':
+                    answer_text = 'true' + answer_text
+            answers_list.append(answer_text)
+        answers = ';'.join(answers_list)
+        file.write(f'{number};"{question}";"{answers}"\n')
 
-    ticket_file.close()
+file.close()
 
 driver.quit()
